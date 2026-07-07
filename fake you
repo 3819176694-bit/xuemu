@@ -1,0 +1,132 @@
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
+local P = Players.LocalPlayer
+local char = P.Character or P.CharacterAdded:Wait()
+local HRP = char:WaitForChild("HumanoidRootPart")
+
+local Window = Rayfield:CreateWindow({
+    Name = "血墓脚本",
+    LoadingTitle = "加载中...",
+    LoadingSubtitle = "正在初始化透视功能...",
+    ToggleUIKeybind = Enum.KeyCode.RightShift,
+    ShowText = "血墓菜单",
+    ConfigurationSaving = { Enabled = false }
+})
+
+local MainTab = Window:CreateTab("主要", 4483362458)
+
+local EnemiesFolder = Workspace:FindFirstChild("Enemies")
+local ESPEnabled = false
+local BillboardGuis = {}
+
+local function GetPath(instance)
+    local path = instance.Name
+    local parent = instance.Parent
+    while parent and parent ~= Workspace.Enemies do
+        path = parent.Name .. "/" .. path
+        parent = parent.Parent
+    end
+    return "Enemies/" .. path
+end
+
+local function UpdateESP()
+    if not EnemiesFolder then return end
+    
+    for _, enemy in ipairs(EnemiesFolder:GetDescendants()) do
+        if enemy:IsA("Model") and enemy ~= char then
+            local rootPart = enemy:FindFirstChild("HumanoidRootPart") or enemy:FindFirstChild("Torso") or enemy.PrimaryPart
+            if rootPart then
+                if ESPEnabled then
+                    if not BillboardGuis[enemy] then
+                        local billboard = Instance.new("BillboardGui")
+                        billboard.Name = "BloodTombESP"
+                        billboard.Size = UDim2.new(0, 180, 0, 25)
+                        billboard.StudsOffset = Vector3.new(0, 3, 0)
+                        billboard.AlwaysOnTop = true
+                        billboard.Adornee = rootPart
+                        billboard.Parent = enemy
+                        
+                        local bg = Instance.new("Frame")
+                        bg.Size = UDim2.new(1, 0, 1, 0)
+                        bg.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+                        bg.BackgroundTransparency = 0.7
+                        bg.BorderSizePixel = 0
+                        bg.Parent = billboard
+                        
+                        local pathLabel = Instance.new("TextLabel")
+                        pathLabel.Name = "PathLabel"
+                        pathLabel.Size = UDim2.new(1, 0, 1, 0)
+                        pathLabel.BackgroundTransparency = 1
+                        pathLabel.Text = GetPath(enemy)
+                        pathLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        pathLabel.TextStrokeColor3 = Color3.fromRGB(255, 0, 0)
+                        pathLabel.TextStrokeTransparency = 0
+                        pathLabel.TextScaled = true
+                        pathLabel.Font = Enum.Font.GothamBold
+                        pathLabel.Parent = billboard
+                        
+                        BillboardGuis[enemy] = billboard
+                    end
+                else
+                    if BillboardGuis[enemy] then
+                        BillboardGuis[enemy]:Destroy()
+                        BillboardGuis[enemy] = nil
+                    end
+                end
+            end
+        end
+    end
+    
+    if not ESPEnabled then
+        for enemy, billboard in pairs(BillboardGuis) do
+            if billboard then
+                billboard:Destroy()
+            end
+        end
+        BillboardGuis = {}
+    end
+end
+
+MainTab:CreateToggle({
+    Name = "敌人透视",
+    CurrentValue = false,
+    Callback = function(value)
+        ESPEnabled = value
+        UpdateESP()
+    end
+})
+
+MainTab:CreateButton({
+    Name = "刷新透视",
+    Callback = function()
+        UpdateESP()
+    end
+})
+
+MainTab:CreateSection("信息")
+MainTab:CreateParagraph({
+    Title = "血墓脚本",
+    Content = "透视Workspace.Enemies中所有Model\n显示完整路径和红色描边"
+})
+
+task.spawn(function()
+    while true do
+        if ESPEnabled then
+            UpdateESP()
+        end
+        task.wait(0.1)
+    end
+end)
+
+Rayfield:Notify({
+    Title = "血墓脚本已加载",
+    Content = "敌人透视功能已就绪",
+    Duration = 3
+})
+
+print("✅ 血墓脚本已加载完成")
+print("📌 透视Workspace.Enemies中的所有Model")
+print("📌 显示完整路径和红色描边")
